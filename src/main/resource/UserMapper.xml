@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.mybatis.UserDao">
+    <sql id="userColumns">
+        ${alias}.id,
+        ${alias}.user_id,
+        ${alias}.name,
+        ${alias}.create_date
+    </sql>
+    <resultMap id="userMap" type="java.util.TreeMap">
+        <id column="id" property="id"></id>
+        <result column="name" property="name"></result>
+    </resultMap>
+    <resultMap id="goods" type="Goods">
+        <id column="id" property="id"></id>
+        <result column="user_id" property="userId"></result>
+        <result column="goods_name" property="goodsName"></result>
+        <result column="price" property="price"></result>
+    </resultMap>
+    <resultMap id="userGoods" type="User">
+        <id column="user_id" property="userId"></id>
+        <result column="name" property="name"></result>
+        <result column="create_date" property="createDate"></result>
+        <collection property="userGoods" ofType="Goods">
+            <result column="goods_name" property="goodsName"></result>
+            <result column="price" property="price"></result>
+        </collection>
+    </resultMap>
+
+    <select id="getById" resultType="User">
+        SELECT  * FROM USER  WHERE  id=#{id}
+    </select>
+    <select id="selectUser" parameterType="int" resultType="User">
+        select
+        <include refid="userColumns">
+            <property name="alias" value="t"></property>
+        </include>
+        from user t where t.id = #{id}
+    </select>
+    <select id="selectUserByUser" parameterType="User" resultType="User">
+        select * from user where
+        1=1
+        <choose>
+            <when test="name!=null">
+                and name like "%"#{name}"%"
+            </when>
+            <when test="id!=null">
+                and id = #{id}
+            </when>
+        </choose>
+    </select>
+    <select id="selectUserMap" parameterType="User" resultMap="userMap">
+        select id,name from user where id = #{id}
+    </select>
+
+    <insert id="insert" parameterType="User" useGeneratedKeys="true">
+        INSERT into user (`user_id`,`create_date`,`name`)
+        VALUES (#{userId},#{createDate},#{name})
+    </insert>
+    <insert id="insertBatch" useGeneratedKeys="true" keyProperty="id">
+        INSERT into user (`user_id`,`create_date`,`name`)
+        VALUES
+        <foreach collection="list" item="user" separator=",">
+            (#{user.userId},#{user.createDate},#{user.name})
+        </foreach>
+    </insert>
+
+    <select id="selectUserGoods" parameterType="User" resultMap="userGoods" useCache="true">
+        SELECT
+        u.user_id,
+        u.`name`,
+        u.create_date,
+        g.goods_name,
+        g.price
+        FROM
+        USER u
+        JOIN goods g ON u.user_id = g.user_id
+        <where>
+            u.id=1
+        </where>
+    </select>
+    <update id="updateUser" parameterType="User">
+        UPDATE USER
+        <set>
+            <if test="name!=null">name=#{name},</if>
+            <if test="createDate!=null">create_date=#{createDate},</if>
+        </set>
+        WHERE id=#{id}
+    </update>
+    <!--只有prefix=“set”，表示在trim包裹的部分的前面添加 set。
+    只有suffixOverrides=“,”，表示删除最后一个逗号。-->
+    <update id="updateGoods" parameterType="Goods">
+        update goods
+        <trim prefix="set" suffixOverrides=",">
+            <if test="goodsName!=null and goodsName!=''">goods_name= #{goodsName},</if>
+            <if test="price!=null and price!=''">price= #{price},</if>
+        </trim>
+        <where>id = #{id}</where>
+    </update>
+    <select id="findUserList" parameterType="list" resultType="User">
+        SELECT *
+        FROM USER
+        WHERE ID in
+        <foreach collection="list" item="id" separator="," open="(" close=")">
+            #{id}
+        </foreach>
+    </select>
+</mapper>
